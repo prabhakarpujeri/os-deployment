@@ -1,0 +1,98 @@
+---
+- name: configure YUM  repo for RHEL7
+  yum_repository:
+    name: dell-rhel7
+    description: dell packages for rhel7
+    baseurl: http://linux.dell.com/repo/hardware/latest/os_dependent/RHEL7_64/
+    gpgcheck: no
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+- name: configure YUM  repo for RHEL6
+  yum_repository:
+    name: dell-rhel6
+    description: dell packages for rhel6
+    baseurl: http://linux.dell.com/repo/hardware/latest/os_dependent/RHEL6_64/
+    gpgcheck: no
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+
+- name: configure zypper repo for SLES 12
+  zypper_repository:
+    name: dell-repo
+    repo: http://linux.dell.com/repo/hardware/latest/os_dependent/SLES12_64/
+    autorefresh: no
+    runrefresh: no
+    disable_gpg_check: yes
+    state: present
+
+  when: "ansible_distribution == 'SLES'  and ansible_distribution_major_version == '12'"
+
+- name: configure zypper repo for SLES 11
+  zypper_repository:
+    name: dell-repo
+    repo: http://linux.dell.com/repo/hardware/latest/os_dependent/SLES11_64/
+    state: present
+    disable_gpg_check: yes
+    autorefresh: no
+    runrefresh: no
+  when: "ansible_distribution == 'SLES'  and ansible_distribution_major_version == '11'"
+
+- name: install racadm for SLES
+  zypper:
+    name: srvadmin-idracadm
+    state: present
+  when: ansible_distribution == 'SLES'
+
+- name: install racadm
+  yum:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - "{{RedHat.packages}}"
+  when: ansible_distribution == 'RedHat'
+
+
+  when: "ansible_os_family == 'RedHat'  and ansible_distribution_major_version == '12'"
+
+- debug: msg="{{ansible_distribution}}"
+
+
+- name: disconnect if already connected any ISO
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} remoteimage -d"
+  with_items:
+    - "{{idracadm_hosts}}"
+
+- name: Attach ISO image
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} remoteimage -c -u {{share_user}}  -p {{share_password}}  -l {{share_iso_path}}"
+  with_items:
+    - "{{idracadm_hosts}}"
+
+- name: Enable one time boot
+  #shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} set iDRAC.ServerBoot.BootOnce Enabled"
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} config -g cfgServerInfo -o cfgServerBootOnce 1"
+  with_items:
+    - "{{idracadm_hosts}}"
+
+- name: Set Virtual DVD onetime boot 
+  #shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} set idrac.serverboot.FirstBootDevice VCD-DVD"
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} config -g cfgServerInfo -o cfgServerFirstBootDevice VCD-DVD"
+  with_items:
+    - "{{idracadm_hosts}}"
+- name: set  boot mode
+  #shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} set BIOS.BiosBootSettings.BootMode {{bootMode}}"
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} set BIOS.BiosBootSettings.BootMode {{bootMode}}"
+  with_items:
+    - "{{idracadm_hosts}}"
+  when: bootMode is defined
+
+- name: schdule BIOS config job
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} jobqueue create BIOS.Setup.1-1"
+  when: bootMode is defined
+  with_items:
+    - "{{idracadm_hosts}}"
+
+- name: Powercycle Server
+  shell: "idracadm -r {{item}} -u {{idracadm_user}} -p {{idracadm_password}} serveraction powercycle "
+  with_items:
+    - "{{idracadm_hosts}}"
+
+

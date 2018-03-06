@@ -1,0 +1,9 @@
+---
+redhat:
+  packages:
+    - openssl-devel
+    - srvadmin-idracadm
+
+env:
+  PATH: "{{PATH}}:/opt/dell/bin"  
+# vars file for racadm-deployment

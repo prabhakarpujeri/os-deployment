@@ -1,0 +1,11 @@
+---
+idracadm_user: root
+idracadm_password: calvin
+idracadm_hosts:
+  - 100.98.4.22
+share_user: dummy
+share_password: dummy
+share_iso_path: "//100.98.4.4/public/test/automation/new_f27.iso"
+
+# defaults file for racadm-deployment
+#
